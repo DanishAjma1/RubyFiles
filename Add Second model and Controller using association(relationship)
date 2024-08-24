@@ -1,0 +1,34 @@
+Generating a Model
+
+We're going to see the same generator that we used before when creating the Article model. This time we'll create a Comment model to hold a reference to an article. Run this command in your terminal:
+
+	bin/rails generate model Comment commenter:string body:text article:references
+
+	bin/rails db:migrate
+
+Put this line to that model's rb file in which the other tables's primary key lies as a foreign key.
+
+	#class Comment < ApplicationRecord
+	  belongs_to :article
+	#end
+
+Also write out these lines to the primary key model's rb file
+
+	#class Article < ApplicationRecord
+	  has_many :comments
+
+	  validates :title, presence: true
+	  validates :body, presence: true, length: { minimum: 10 }
+	#end
+
+And write the root path as like,the other model's resources must be nested in primary key model's resources..like this.
+	
+	#Rails.application.routes.draw do
+	  root "articles#index"
+
+	  resources :articles do
+	    resources :comments
+	 # end
+	#end
+
+And generate a controller of second model who control this model.
