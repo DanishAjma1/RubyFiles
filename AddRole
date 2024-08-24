@@ -1,0 +1,56 @@
+Add Role to User Model
+
+Objective: Add a role attribute to the User model to store user roles.
+    Generate Migration:
+	rails generate migration AddRoleToUsers role:string
+Migration File:
+
+	class AddRoleToUsers < ActiveRecord::Migration[7.0]
+	  def change
+	    add_column :users, :role, :string
+	  end
+	end
+
+Run Migration:
+
+    rails db:migrate
+
+Edit User Model:
+
+    class User < ApplicationRecord
+      # Devise modules
+      
+      # Validations for role
+      validates :role, presence: true, inclusion: { in: %w[admin moderator user] }
+
+      # Optional: Use enums for roles
+      enum role: { admin: 'admin', moderator: 'moderator', user: 'user' }
+    end
+
+Generate Custom Devise Registrations Controller:
+
+	rails generate devise:controllers users -c=registrations
+
+	class Users::RegistrationsController < Devise::RegistrationsController
+	  before_action :configure_permitted_parameters, if: :devise_controller?
+
+	  protected
+
+	  def configure_permitted_parameters
+	    devise_parameter_sanitizer.permit(:sign_up, keys: [:role])
+	  end
+	end
+	
+	dit Routes:
+
+Update config/routes.rb to use the custom controller.
+
+	devise_for :users, controllers: { registrations: 'users/registrations' }
+
+Edit Signup Form View:
+
+Update app/views/devise/registrations/new.html.erb to include a dropdown for roles.
+
+	<%= f.label :role %><br />
+	<%= f.select :role, options_for_select(User.roles.keys.map { |role| [role.humanize, role] }) %>
+

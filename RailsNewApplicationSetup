@@ -1,0 +1,29 @@
+bin/rails generate controller Articles index --skip-routes
+Rails.application.routes.draw do
+  root "articles#index"
+
+  get "/articles", to: "articles#index"
+end
+bin/rails generate model Article title:string body:text
+bin/rails db:migrate
+bin/rails console
+article = Article.new(title: "Hello Rails", body: "I am on Rails!")
+article.save
+article
+Article.find(1)
+Article.all
+class ArticlesController < ApplicationController
+  def index
+    @articles = Article.all
+  end
+end
+<h1>Articles</h1>
+
+<ul>
+  <% @articles.each do |article| %>
+    <li>
+      <%= article.title %>
+    </li>
+  <% end %>
+</ul>
+bin/rails server

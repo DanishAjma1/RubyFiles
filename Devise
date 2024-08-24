@@ -1,0 +1,46 @@
+bundle add devise (in Gemfile, add 'gem "devise"' at the center of the file)
+bundle install(optional)
+rails generate devise:install
+
+At this point, a number of instructions will appear in the console. Among these instructions, you'll need to set up the default URL options for the Devise mailer in each environment. Here is a possible configuration for config/environments/development.rb:
+
+'config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }'
+
+rails generate devise MODEL_Name
+rails db:migrate
+
+Devise will create some helpers to use inside your controllers and views. To set up a controller with user authentication, just add this before_action (assuming your devise model is 'User'):
+
+before_action :authenticate_user!, only: [:new, :create, :edit, :update, :destroy]
+
+protect_from_forgery prepend: true
+rails generate devise:views
+
+If you have more than one Devise model in your application (such as User and Admin), you will notice that Devise uses the same views for all models. Fortunately, Devise offers an easy way to customize views. All you need to do is set config.scoped_views = true inside the config/initializers/devise.rb file.
+
+After doing so, you will be able to have views based on the role like users/sessions/new and admins/sessions/new. If no view is found within the scope, Devise will use the default view at devise/sessions/new. You can also use the generator to generate scoped views:
+
+rails generate devise:users views
+make sure the routes.rb file ..
+
+	Rails.application.routes.draw do
+	  devise_for :users
+	  
+	  resources :books #associating controller name
+	  
+	  root to: "books#index" #associating controller action
+	end
+
+And also put these lines in custom controller, after the before action line..
+
+	 def after_sign_in_path_for(resource)
+	    books_path # Redirect to the dashboard after sign-in
+	  end
+
+	  def after_sign_out_path_for(resource_or_scope)
+	    root_path # Redirect to the homepage after sign-out
+	  end
+	  
+Define all the actions you want to restrict..
+Run the server using rails s OR rails server
+run on the browser's localhost/3000..
