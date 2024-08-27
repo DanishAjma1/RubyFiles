@@ -40,3 +40,19 @@ class ApplicationController < ActionController::Base
     redirect_to root_url, alert: exception.message
   end
 end
+when you done,Now if you will want to show any message rather than exception raise than you need to remove 'load_and_authorize_resource' this line from the top of your controller and put 'if can?' condition on the update and destroy action like this..
+
+ def update
+    @book = Book.find(params[:id])
+    if can?(:update, @book)
+    if @book.update(book_params)
+      redirect_to @book, notice: "Book was successfully updated."
+    else
+      render :edit
+    end
+    else
+    redirect_to book_path, notice: "Access denied: You don't have permission to update this post."
+    end
+  end
+  
+END..

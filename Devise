@@ -44,3 +44,9 @@ And also put these lines in custom controller, after the before action line..
 Define all the actions you want to restrict..
 Run the server using rails s OR rails server
 run on the browser's localhost/3000..
+
+SECURITY
+Basic Authentication
+
+Put this line to appropriate controller' starting.. Here you can also update user restrictions and authentication measures..
+	http_basic_authenticate_with name: "dhh", password: "secret", except: [:index, :show]

@@ -1,0 +1,61 @@
+if you want to restrict your application, only that user can make changes to his work that he have created like he create a book and now only he can modify it, then you need to follow these steps,
+
+First we need to make an association because we will know which user make these changes setup for it..
+ Set Up the Association in Models
+You need to establish a relationship between the User model and the Book model.
+You know about user if not than take it(Here user is used as a devise model you also can create other model to implement it)..
+User Model (user.rb):put this line..
+	  has_many :books, dependent: :destroy
+	  
+Book Model (book.rb) put this line..
+	 belongs_to :user
+	 
+Create the Migration to Add user_id to Books
+You need a migration to add a user_id column to the books table to store the association:
+	rails generate migration AddUserIdToBooks user:references
+	rails db:migrate
+
+you encounterd any error than you will need to delete the posts or all data in of that model in which you are going to restrict users..
+
+In that files path terminal..
+rails console
+Make an object of that table for example:
+	Book.destroy_all
+
+Checkout the schema of this application and take a look at migration
+And now add this line to create action in associated model's controller
+	@book = current_user.books.build(book_params)
+	
+And using can? condition restrict user..
+ def update
+    @book = Book.find(params[:id])
+    if can?(:update, @book)
+    if @book.update(book_params)
+      redirect_to @book, notice: "Book was successfully updated."
+    else
+      render :edit
+    end
+    else
+    redirect_to book_path, notice: "Access denied: You don't have permission to update this post."
+    end
+  end
+  
+Also make an destroy action using this ..
+
+In Ability Class that is an CanCan class put this data to CanCan class
+
+include CanCan::Ability
+
+  def initialize(user)
+    user ||= User.new  # Guest user
+
+    if user.admin?
+      can :manage, :all  # Admins can manage everything
+    else
+      can :read, Book  # All users can read all books
+      can :create, Book  # All users can create books
+      can [:update, :destroy], Book, user_id: user.id  # Only update or destroy books they created
+    end
+  end
+  
+  
