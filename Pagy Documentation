@@ -1,0 +1,57 @@
+1. Add pagy gem in gem file:
+
+   gem "pagy"
+
+2. Run bundle install in terminal. This will install pagy gem.
+
+3. Create a file named "pagy.rb" in "initializers" folder located at "config/initializers"
+
+4. Put the following code in pagy.rb:
+
+   require "pagy/extras/bootstrap"
+   Pagy::DEFAULT[:limit] = 5
+
+
+5. Include Pagy::Backend in your ApplicationController located at "app/controllers/  
+   application_controller.rb":
+   
+   class ApplicationController < ActionController::Base
+     include Pagy::Backend
+   end
+   
+   
+6. Include Pagy::Frontend in your ApplicationHelper located at "app/helpers/application_helper.rb"
+
+   module ApplicationHelper
+     include Pagy::Frontend
+   end   
+
+7. Include the following code in your controller for me it is posts_controller 
+
+
+  def index
+    if params[:query].present?
+      @pagy, @posts = pagy(Post.search_posts(params[:query]))
+    else
+      @pagy, @posts = pagy(Post.all)
+    end
+  end
+
+   
+8. Display pagination in your views like in index.html.erb by writing the following code:
+
+   <div>
+      <%= pagy_nav(@pagy) %>
+   </div>
+   
+
+9. Incase an html escaping error occurs while rendering the html that we added in views 
+   previously then you can resolve this by adding .html_safe like this:
+   
+   
+   <div>
+      <%= pagy_nav(@pagy).html_safe %>
+   </div>
+   
+       
+
