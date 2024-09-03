@@ -1,0 +1,201 @@
+                           Devise JWT Authentication for API
+                           
+1. First of all add the following gem in gemfile:
+    
+    gem 'devise-jwt'
+
+2. Run the following command in terminal to install gem:
+
+    bundle install
+    
+3. Add the following code in config/initializers/devise.rb:
+
+    config.jwt do |jwt|
+      jwt.secret = Rails.application.credentials.dig(:devise, :jwt_secret_key)
+    end            
+    
+
+         
+
+
+--> Create session controller if not present:
+
+    rails generate controller users/sessions
+
+         
+         
+5.  Create API endpoints for "login" and "logout". Add following code in app/controllers/users/sessions_controller.rb:
+
+
+    class Users::SessionsController < Devise::SessionsController
+  skip_before_action :verify_authenticity_token
+  respond_to :html, :json
+
+  def create
+    super do |resource|
+      if request.format.json?
+        render json: {
+          message: "Signed in successfully.",
+          data: current_user
+        }, status: :ok and return
+      end
+    end
+  end
+
+  private
+
+  def respond_with(resource, _opts = {})
+    respond_to do |format|
+      format.html { super } # Will render the default Devise HTML response
+      format.json {
+        render json: {
+          message: "Signed in successfully.",
+          data: current_user
+        }, status: :ok
+      }
+    end
+  end
+
+  def respond_to_on_destroy
+    if request.format.json?
+      head :no_content
+    else
+      super  # This will handle the HTML format and render the default Devise response
+    end
+  end
+end
+
+
+
+
+6. Add this to config/routes.rb:
+
+
+   devise_for :users, controllers: {
+    registrations: "users/registrations",
+    sessions: "users/sessions"
+  }
+  
+  
+7. Create a file "generate_secret.rb" in your project folder and add the following code in this file: (-----SKIP THIS STEP-----)
+
+
+   require 'securerandom'
+   puts SecureRandom.hex(64)
+  
+
+8. Then use this file to generate a random secret key by using this command in terminal:
+   (--------DIRECTLY RUN THIS TO GENERATE SECRET KEY---------)
+
+   rails secret
+
+
+Copy this secret key
+
+
+9. Then run this command in VSCode:
+
+   EDITOR="code --wait" rails credentials:edit
+   
+   
+   
+   NOTE: This command will create "credentials.yml.enc" and "master.key" file + open the "credentials.yml.enc" file for edit, if both these files are not present. Otherwise it will just open the "credentials.yml.enc" file for edit.
+   
+   
+
+10. A file opens in the editor. Add the following line in the file and save it:
+
+    devise:
+      jwt_secret_key: your_jwt_secret_key
+ 
+   Note: Replace "your_jwt_secret_key" with thie copied secret key.
+   
+
+11. Run the following command and check if the master key environment variable is set:
+
+
+   echo $RAILS_MASTER_KEY
+
+   NOTE: If the variable is set, it will display the value. If not, it will return an empty line.
+   
+   
+12.  If empty line is returned then run the following command in terminal:
+
+
+  export RAILS_MASTER_KEY=your-master-key-here
+
+
+
+   NOTE:  Replace "your-master-key-here" with the master key present in "master.key" file. 
+   
+   
+13. Check the following lines are present is registrations_controller:
+
+
+    skip_before_action :verify_authenticity_token
+    before_action :configure_permitted_parameters, if: :devise_controller?
+
+    protected
+
+    def configure_permitted_parameters
+      devise_parameter_sanitizer.permit(:sign_up, keys: [ :role ])
+    end                                        
+    
+    
+    
+14. Run this command and create a JWT Deny list model:
+
+    
+    rails generate model JwtDenylist jti:string:index exp:datetime
+
+
+15. Check the following code is present in the generated model:
+
+
+   class JwtDenylist < ApplicationRecord
+     include Devise::JWT::RevocationStrategies::Denylist
+   end
+
+
+4. Include following lines in User model(app/models/user.rb):
+
+    devise :database_authenticatable, :registerable,
+         :recoverable, :rememberable, :validatable,
+         :jwt_authenticatable, jwt_revocation_strategy: JwtDenylist
+
+
+16. Run migration:
+   
+   
+    rails db:migrate
+    
+    
+17. Edit "config/initializers/devise.rb":
+
+    config.jwt do |jwt|
+      jwt.secret = Rails.application.credentials.dig(:devise, :jwt_secret_key)
+    end
+    
+18. Configure routes in routes.rb:  (Add the following code:) (complete routes.rb code)
+
+
+    Rails.application.routes.draw do
+  devise_for :users, controllers: {
+    registrations: "users/registrations",
+    sessions: "users/sessions"
+  }
+
+  namespace :api do
+    namespace :v1 do
+      devise_for :users, controllers: {
+        sessions: "api/v1/sessions"  # For API requests
+      }
+      resources :posts, only: [ :index, :show, :create, :update, :destroy ]
+    end
+  end
+  root "posts#index"
+
+  resources :posts do
+    resources :comments
+  end
+end  
