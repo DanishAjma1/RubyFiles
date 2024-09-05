@@ -1,0 +1,97 @@
+	Send email using Sidekiq with Devise
+	
+Gem "sidekiq"
+run the command "bundle install"
+
+---------------------------------
+If you want to send email when the user forgot the password then you need to implement devise or authorization first,Fortunately Rails provides many options for it also like "devise".Than you just need to follow these steps.
+----------------------------------
+Generate the job to enqueue the jobs for sidekiq execution..
+
+	rails generate job passwordresetmailerjob
+
+Generate the mailer
+	rails generate mailer "usermailer"
+	
+Paste this code to job's  file..
+
+  queue_as :mailers
+
+  def perform(user, token)
+    UserMailer.reset_password_instructions(user, token).deliver_now
+  end
+
+Paste this code to mailer's  file..
+
+  helper :application
+  include Devise::Controllers::UrlHelpers
+
+  def reset_password_instructions(user, token)
+    @token = token
+    mail(to: user.email, subject: "Reset your password")
+  end
+
+Devise also provides all these functions like confirmable,mailing ETC but in application it can slow down the reliablity and speed. To overcome this,we implement the sidekiq , it enqueue the jobs and don't distrub the application running process. It execute the jobs when the sidekiq feel free and also benefit of it is that, if the sending process failed it also retries.
+
+So, for the sidekiq we need to override the method of devise send_reset_password_instructions and paste this code to User.rb file which is the model that is used to save the authorize persons data.
+
+devise :database_authenticatable, :registerable,
+         :recoverable, :rememberable, :validatable
+
+  # Override to enqueue job for sending reset password instructions
+  def send_reset_password_instructions
+    token = set_reset_password_token
+    PasswordResetMailerJob.perform_later(self, token)
+    token
+  end
+  
+Note: There are too much methods for send or do the jobs immediately or later.Check that himself.
+ 
+Ensure that Devise's mailer is set to use your UserMailer:
+
+	# config/initializers/devise.rb
+	config.mailer = 'UserMailer'
+	
+Make sure Sidekiq is properly set up as your Active Job backend by configuring it in your config/application.rb:
+
+	config.active_job.queue_adapter = :sidekiq
+
+Correct Mailer Settings:
+
+Make sure your config/environments/development.rb or config/environments/production.rb has the correct SMTP settings.
+Example for Gmail SMTP:
+
+ruby
+Copy code
+config.action_mailer.delivery_method = :smtp
+config.action_mailer.smtp_settings = {
+  address:              'smtp.gmail.com',
+  port:                 587,
+  domain:               'example.com',
+  user_name:            ['GMAIL_USERNAME'], # Set in environment variables
+  password:             ['GMAIL_PASSWORD'], # Set in environment variables
+  authentication:       'plain',
+  enable_starttls_auto: true
+}
+you need to set only email(give the email which exist,it is the email from which you send the mail) and password(Password get from the App passwords in Google passwords).
+
+In Devise, the predefined views are available,but in sidekiq we need to create the views himself. The view name will the as the action name like in mailer's file "reset_password_instructions" and its location will be the "app/views/mailer_name/reset_password_instructions.html.erb".And modify accroding to yours.
+if you want to make the same like devise reset password view than you paste this code here..
+
+	<p>Hello!</p>
+
+	<p>Someone has requested a link to change your password. You can do this through the link below.</p>
+
+	<p><%= link_to 'Change my password', edit_user_password_url(@resource, reset_password_token: @token) %></p>
+
+	<p>If you didn't request this, please ignore this email.</p>
+	<p>Your password won't change until you access the link above and create a new one.</p>
+
+
+In sidekiq you can't get the devise's controller to modify according to yours,you need to overrider the methods of devise in User.rb class or you can make a separate controller to override the methods.
+
+Using this command,
+
+	rails generate controller Users::Passwords
+	
+	

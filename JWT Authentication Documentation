@@ -1,4 +1,66 @@
-                           Devise JWT Authentication for API
+				*API Calls without authentication*
+	Api/v1/Articles Controller  (this controller is used for Api Actions, and its a little bit different from custom controller)
+
+let's start it..
+	$ rails generate controller Api::V1::Articles
+
+Open that files and paste these actions init..
+	before_action :set_article, only: [:show, :update, :destroy]
+
+    def index
+      @articles = Article.all
+      render json: @articles
+    end
+
+    def show
+      render json: @article
+    end
+
+    def create
+      @article = Article.new(article_params)
+
+      if @article.save
+        render json: @article, status: :created
+      else
+        render json: @article.errors, status: :unprocessable_entity
+      end
+    end
+
+    def update
+      if @article.update(article_params)
+        render json: @article
+      else
+        render json: @article.errors, status: :unprocessable_entity
+      end
+    end
+
+    def destroy
+      @article.destroy
+      head :no_content
+    end
+
+    private
+
+    def set_article
+      @article = Article.find(params[:id])
+    end
+
+    def article_params
+      params.require(:article).permit(:title, :content)
+    end
+    
+Also config routes accordingly..
+
+  namespace :api do
+    namespace :v1 do 
+      resources :articles
+    end
+  end		
+
+Now you can make api on postman and run it..
+
+
+                           *Devise JWT Authentication for API*
                            
 1. First of all add the following gem in gemfile:
     
@@ -18,9 +80,12 @@
          
 
 
---> Create session controller if not present:
+--> Create session controller if not present in the User directory(make sure you have performed devise):
+Make sure the controller must inherited from devise class...like this
+class Users::SessionsController < Devise::SessionsController
 
-    rails generate controller users/sessions
+rails generate devise:controllers users/sessions
+
 
          
          
@@ -64,6 +129,17 @@
     end
   end
 end
+
+OR
+
+ def destroy
+    super do
+      if request.format.json?
+        head :no_content
+      end
+    end
+  end
+
 
 
 
@@ -124,8 +200,6 @@ Copy this secret key
 
   export RAILS_MASTER_KEY=your-master-key-here
 
-
-
    NOTE:  Replace "your-master-key-here" with the master key present in "master.key" file. 
    
    
@@ -141,7 +215,10 @@ Copy this secret key
       devise_parameter_sanitizer.permit(:sign_up, keys: [ :role ])
     end                                        
     
-    
+Also put these lines to Session controller..
+	
+	skip_before_action :verify_authenticity_token, only: [ :create, :update, :destroy ]
+	respond_to :html, :json
     
 14. Run this command and create a JWT Deny list model:
 
