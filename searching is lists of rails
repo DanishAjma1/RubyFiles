@@ -1,0 +1,131 @@
+Add search_bar to find any project or anthing from the List.
+
+First add this search_bar to the view where you want to search anything..
+
+	<%= form_with url: search_projects_path, method: :get, local: false, id: "search-form" do %>
+	  <%= text_field_tag :query, params[:query], placeholder: "Search projects...", id: "search-input" %>
+	<% end %>
+
+Then you need to create a search name action in custom_controller which will handle this action.
+
+	def search
+	    @projects = (Project.All) Or Project.where("name LIKE ?", "%#{params[:query]}%")
+	    respond_to do |format|
+	      format.turbo_stream { render turbo_stream: turbo_stream.replace("projects-table-body", "index" Or partial: "partial_view" , locals: { projects: @projects }) }
+	      format.html { render "index" Or partial: "partial_view", locals: { projects: @projects } }
+	end
+
+Then in controller/javascript/application.js put this code.
+
+	import "@hotwired/turbo-rails"
+	import "controllers"
+	import "@rails/ujs"
+	document.addEventListener('DOMContentLoaded', () => {
+	  const searchInput = document.getElementById('search-input');
+
+	  if (searchInput) {
+	    searchInput.addEventListener('input', () => {
+	      const form = document.getElementById('search-form');
+	      Rails.fire(form, 'submit');
+	    });
+	  }
+	});
+
+config the routes..
+
+	 resources :projects do
+	  collection do
+	    get "search"
+	  end
+	end
+_______________________________________________________________________________________________________________________________________________
+
+				*********** Now for association (if this table associate with any other table)********************
+				
+Same,First add this search_bar to the view where you want to search anything..
+
+<%= form_with url: search_projects_path, method: :get, local: false, id: "search-form" do %>
+  <%= text_field_tag :query, params[:query], placeholder: "Search projects...", id: "search-input" %>
+<% end %>
+		^
+		|
+		
+		Ensure that,if you are calling the second table data in first table index or first table view than you don't need to change the form-url,it remains same,
+	else if you are using Second_model's view to show the second table data then you must change teh form-url into like (  form_with url: search_projects_path  ->  				search_project_bug_path  )
+	
+Now,you need to create a search name action in custom_controller which will handle this action.If you have user.roles than you can follow it otherwise you can change it according to yours..
+
+	if current_user.qa?
+	      @projects = current_user.assigned_projects.where("name LIKE ?", "%#{params[:query]}%")
+	      @pagy, @projects = pagy(@projects)
+	      render_search_results("projects-table-body", "projects")
+
+	    elsif current_user.developer?
+	      @bugs = current_user.assigned_bugs.where("title LIKE ?", "%#{params[:query]}%")
+	      @pagy, @bugs = pagy(@bugs)
+	      render_search_results("bugs-table-body", "bugs")
+	    end
+	  end
+	  def render_search_results(dom_id, type)
+	    respond_to do |format|
+	      format.turbo_stream do
+		render turbo_stream: turbo_stream.replace(dom_id, partial: "#{type}/table", locals: { type.to_sym => instance_variable_get("@#{type}") })
+	      end
+	      format.html { render "index" }
+	    end
+	  end
+	
+In this project i have rendered the views for update the data on each search, and will show on the render_page that is mentioned in line no 75. I have rendered view for it on line no 73 "#{type}/table" means you have to create type->controller view with the name of _table.(Optional)
+OR you can put it into that same view /table.html.erb
+
+	<% bugs.each do |bug| %>
+	  <tr>
+	    <td><%= bug.title %></td>
+	    <td><%= bug.description %></td>
+	    <td><%= bug.priority %></td>
+	    <td>
+	      <%= link_to 'Edit', edit_project_bug_path(bug.project, bug) %>
+	    </td>
+	  </tr>
+	<% end %>
+
+
+Then in controller/javascript/application.js put this code.
+
+	import "@hotwired/turbo-rails"
+	import "controllers"
+	//import "@rails/ujs"
+	ddocument.addEventListener('DOMContentLoaded', () => {
+	  const searchInput = document.getElementById('search-input');
+
+	  if (searchInput) {
+	    searchInput.addEventListener('input', () => {
+	      const form = document.getElementById('search-form');
+	      Rails.fire(form, 'submit');
+	    });
+	  }
+	});
+
+
+config the routes..
+
+	resources :projects do
+	    # Nested route for searching bugs within a project
+	    resources :bugs, only: [ :index, :new, :create, :edit, :update, :destroy ] do
+	      collection do
+		get "search"
+	      end
+	    end
+	    collection do
+	      get "search"
+	    end
+	  end
+
+	  # Route for searching bugs (at the project level or global level depending on implementation)
+	  resources :bugs, only: [ :index, :new, :create, :edit, :update, :destroy ] do
+	    collection do
+	      get "search"
+	    end
+	  end
+
+
