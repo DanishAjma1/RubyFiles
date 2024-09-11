@@ -29,17 +29,25 @@ class Ability
   end
 end
 
-class PostsController < ApplicationController
-  load_and_authorize_resource
-end
+{...	class PostsController < ApplicationController
+	  load_and_authorize_resource(don't use it if you want to show flash messages rather than exception)
+	end
 
-You can handle this in your ApplicationController:
+	You can handle this in your ApplicationController:
 
-class ApplicationController < ActionController::Base
-  rescue_from CanCan::AccessDenied do |exception|
-    redirect_to root_url, alert: exception.message
-  end
-end
+	class ApplicationController < ActionController::Base
+	  rescue_from CanCan::AccessDenied do |exception|
+	    redirect_to root_url, alert: exception.message
+	  end
+	end ....}
+	
+(don't use the upper written code, if you want to show flash messages rather than exception)..
+
+And add this line to application controller while applying the cancancan...
+In Controller/applicationController
+	
+	  include CanCan::ControllerAdditions
+
 when you done,Now if you will want to show any message rather than exception raise than you need to remove 'load_and_authorize_resource' this line from the top of your controller and put 'if can?' condition on the update and destroy action like this..
 
  def update
