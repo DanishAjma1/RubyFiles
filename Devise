@@ -1,5 +1,5 @@
 bundle add devise (in Gemfile, add 'gem "devise"' at the center of the file)
-bundle install(optional)
+bundle install
 rails generate devise:install
 
 At this point, a number of instructions will appear in the console. Among these instructions, you'll need to set up the default URL options for the Devise mailer in each environment. Here is a possible configuration for config/environments/development.rb:
