@@ -7,24 +7,20 @@
 3. Create a file named "pagy.rb" in "initializers" folder located at "config/initializers"
 
 4. Put the following code in pagy.rb:
-
+   require "pagy/extras/overflow"
+   Pagy::DEFAULT[:overflow] = :empty_page
    require "pagy/extras/bootstrap"
    Pagy::DEFAULT[:limit] = 5
 
 
-5. Include Pagy::Backend in your ApplicationController located at "app/controllers/  
+5. Include this into your ApplicationController located at "app/controllers/  
    application_controller.rb":
    
-   class ApplicationController < ActionController::Base
      include Pagy::Backend
-   end
    
-   
-6. Include Pagy::Frontend in your ApplicationHelper located at "app/helpers/application_helper.rb"
+6. Include thi line into your ApplicationHelper located at "app/helpers/application_helper.rb"
 
-   module ApplicationHelper
      include Pagy::Frontend
-   end   
 
 7. Include the following code in your controller for me it is posts_controller 
 
@@ -37,6 +33,7 @@
     end
   end
 
+If you encountring any issue like unintialized  "include Pagy::Frontend" then just restart your server ..
    
 8. Display pagination in your views like in index.html.erb by writing the following code:
 
