@@ -1,3 +1,6 @@
+----------------------------------------------------------------------------------------------------------------------------
+				    SIMPLE SEARCH............
+________________________________________________________________________________________________________________________________________
 Add search_bar to find any project or anthing from the List.
 
 First add this search_bar to the view where you want to search anything..
@@ -41,6 +44,8 @@ config the routes..
 _______________________________________________________________________________________________________________________________________________
 
 				*********** Now for association (if this table associate with any other table)********************
+				
+---------------------------------------------------------------------------------------------------------------------------------------------
 				
 Same,First add this search_bar to the view where you want to search anything..
 
@@ -127,5 +132,228 @@ config the routes..
 	      get "search"
 	    end
 	  end
+
+_____________________________________________________________________________________________________________________________________
+
+					LIVE SEARCH....................
+					
+-----------------------------------------------------------------------------------------------------------------------------------------
+					
+					
+IN view add where you want to search...
+
+	<form id="search-form" action="<%= projects_path %>" method="get">
+	  <input type="text" id="search-input" name="query" placeholder="Search projects...">
+	</form>
+					
+In index of projects..
+	def index
+	    if can? :manage, Project
+	      @projects = current_user.managed_projects
+	      @projects = @projects.where("name LIKE ?", "%#{params[:query]}%") if params[:query].present?
+
+	      respond_to do |format|
+		format.html { render :index } # Render full page with the table
+		format.json do
+		  # Return just the project names as JSON for live search
+		  render json: { projects: @projects.select(:id, :name) }
+		end
+	      end
+      	end
+  
+  
+  And Js for it
+
+	// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
+	import "@hotwired/turbo-rails"
+	import "controllers"
+
+	document.addEventListener('DOMContentLoaded', () => {
+	  const searchInput = document.getElementById('search-input');
+	  const searchForm = document.getElementById('search-form');
+
+	  if (searchInput) {
+	    searchInput.addEventListener('input', () => {
+	      const query = searchInput.value;
+
+	      // Fetch the search results for both projects and bugs
+	      fetch(`${searchForm.action}?query=${query}`, {
+		headers: {
+		  'Accept': 'text/html' // Expect HTML response
+		}
+	      })
+	      .then(response => response.text())
+	      .then(html => {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(html, 'text/html');
+
+		// Update Projects Table
+		const newProjectsTableBody = doc.querySelector('#projects-table-body');
+		const projectsTableBody = document.getElementById('projects-table-body');
+		if (projectsTableBody && newProjectsTableBody) {
+		  projectsTableBody.innerHTML = newProjectsTableBody.innerHTML; // Update projects table body
+		}
+//Same as it is other models..
+	      })
+	      .catch(error => console.error('Error:', error));
+	    });
+	  }
+	});
+
+
+_________________________________________________________________________________________________________________________________
+
+							Live Search with names suggestion..
+							
+-----------------------------------------------------------------------------------------------------------------------------------
+							
+Add into view ..
+
+	<!-- Search Form -->
+	<h1>Projects</h1>
+
+	<!-- Search form -->
+	<form id="search-form" action="<%= projects_path %>" method="get">
+	  <input type="text" id="search-input" name="query" placeholder="Search projects...">
+	</form>
+
+	<!-- Search results div -->
+	<div id="projects-list">
+	  
+	  <%# <%= render partial: "table", locals: { projects: @projects } %><%# (if you don't want to show any projects before any search than you can comment out it)
+You can change the render partial table........%>
+	</div>
+
+
+Index action add these lines....
+
+
+	if current_user.manager?
+	    @projects = current_user.managed_projects
+	    if params[:query].present?
+	      @projects = @projects.where("name LIKE ?", "%#{params[:query]}%")
+	    else
+	      @projects = @projects.none(Optional)
+	    end
+
+	    @pagy, @projects = pagy(@projects)
+
+	    respond_to do |format|
+	      format.html # For normal page load
+	      format.json { render json: { projects: @projects } } # For AJAX request
+	    end
+	    
+Add js ..
+
+	// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
+	import "@hotwired/turbo-rails"
+	import "controllers"
+
+	// Wait for the DOM to be fully loaded
+	document.addEventListener('DOMContentLoaded', () => {
+	  const searchInput = document.getElementById('search-input');
+
+	  // Add an event listener for input changes
+	  if (searchInput) {
+	    searchInput.addEventListener('input', () => {
+	      const query = searchInput.value;
+
+	      // Send an AJAX request
+	      fetch(`/projects.json?query=${query}`, {
+		headers: {
+		  'Accept': 'application/json'
+		}
+	      })
+	      .then(response => response.json())
+	      .then(data => {
+		const projectsList = document.getElementById('projects-list');
+
+		// Clear the current list
+		projectsList.innerHTML = '';
+
+		// Populate the list with the new search results
+		data.projects.forEach(project => {
+		  const listItem = document.createElement('li');
+		  listItem.textContent = project.name;
+		  projectsList.appendChild(listItem);
+		});
+	      })
+	      .catch(error => console.error('Error:', error));
+	    });
+	  }
+	});
+	
+_______________________________________________________________________________________________________________________________
+
+				Live Search with name suggestion (names are link)
+				
+-----------------------------------------------------------------------------------------------------------------------------------
+				
+Controller's Index action code..
+
+	@projects = current_user.managed_projects
+	    if params[:query].present?
+	      @projects = @projects.where("name LIKE ?", "%#{params[:query]}%")
+	    else
+	      # @projects = @projects.none
+	    end
+
+	    @pagy, @projects = pagy(@projects)
+
+	    respond_to do |format|
+	      format.html # For normal page load
+	    format.json do
+	      render json: { projects: @projects.map { |project| { name: project.name, url: project_path(project) } } }  <%# this will map all the projects to create names and urls for creating links using JavaScript..  %>
+	    end
+    	end
+
+
+Java Script code...
+
+
+// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
+import "@hotwired/turbo-rails"
+import "controllers"
+
+// Wait for the DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('search-input');
+
+  // Add an event listener for input changes
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const query = searchInput.value;
+
+      // Send an AJAX request
+      fetch(`/projects.json?query=${query}`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        const projectsList = document.getElementById('projects-list');
+
+        // Clear the current list
+        projectsList.innerHTML = '';
+
+        // Populate the list with the new search results
+        data.projects.forEach(project => {
+          const listItem = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = project.url;  // Set the URL
+          link.textContent = project.name;  // Set the link text
+          
+          // Append the link to the list item
+          listItem.appendChild(link);
+
+          // Append the list item to the projects list
+          projectsList.appendChild(listItem);
+        });
+      })
+      .catch(error => console.error('Error:', error));
+    });
+  }
+});
 
 
