@@ -1,0 +1,88 @@
+
+							Apply pundit one rails Application....
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+In Gemfile add,
+
+	gem "pundit"
+Then run the "bundle install" to install all the related gems..
+
+Include Pundit::Authorization in your application controller:
+
+	class ApplicationController < ActionController::Base
+	  include Pundit::Authorization
+	end
+
+rails g pundit:install
+
+After this install the pundit policies for any controller, like this..
+
+	rails generate pundit:policy project
+
+Define Policy Methods
+In app/policies/project_policy.rb, define methods for authorization:
+
+	class ProjectPolicy < ApplicationPolicy
+	  def index?
+	    user.manager? || user.qa?
+	  end
+
+	  def show?
+	    user.manager? || (record.assigned_to?(user) || user.qa?)
+	  end
+
+	  def create?
+	    user.manager?
+	  end
+
+	  def update?
+	    user.manager? || record.assigned_to?(user)
+	  end
+
+	  def destroy?
+	    user.manager?
+	  end
+
+	  private
+
+	  def assigned_to?(user)
+	    # Logic to determine if the project is assigned to the user
+	  end
+	end
+
+And now use this policy in your controller to restrict users..
+
+	def show
+	    @project = Project.find(params[:id])
+	    authorize @project
+	  end
+
+	  def create
+	    @project = Project.new(project_params)
+	    authorize @project
+	    if @project.save
+	      # Success handling
+	    else
+	      # Failure handling
+	    end
+	  end
+
+	  def update
+	    @project = Project.find(params[:id])
+	    authorize @project
+	    if @project.update(project_params)
+	      # Success handling
+	    else
+	      # Failure handling
+	    end
+	  end
+
+	  def destroy
+	    @project = Project.find(params[:id])
+	    authorize @project
+	    @project.destroy
+	    # Success handling
+	  end
+	  
+END..

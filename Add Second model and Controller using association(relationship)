@@ -32,3 +32,5 @@ And write the root path as like,the other model's resources must be nested in pr
 	#end
 
 And generate a controller of second model who control this model.
+
+	rails g controller Comment

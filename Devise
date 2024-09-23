@@ -11,11 +11,36 @@ rails db:migrate
 
 Devise will create some helpers to use inside your controllers and views. To set up a controller with user authentication, just add this before_action (assuming your devise model is 'User'):
 
-before_action :authenticate_user!, only: [:new, :create, :edit, :update, :destroy]
+	before_action :authenticate_user!
+	protect_from_forgery prepend: true
+Get the devise views using this command..
 
-protect_from_forgery prepend: true
-rails generate devise:views
+	rails generate devise:views
+Note: the devise doesn't provide the predefined any other column so,when you add any other column himself than you need to make a controller that override the devise controller that manage that actions..
 
+	rails generate controller users/registrations
+	2. Modify the Generated Controller
+	Open the newly created controller file at app/controllers/users/registrations_controller.rb and modify it to inherit from Devise::RegistrationsController. Here’s an example of what it should look like:
+
+	class Users::RegistrationsController < Devise::RegistrationsController
+	  # For adding custom behavior, you can override any Devise methods.
+
+	  protected
+
+	  def sign_up_params
+	    params.require(:user).permit(:email, :password, :password_confirmation, :role)
+	  end
+
+	  def account_update_params
+	    params.require(:user).permit(:email, :password, :password_confirmation, :current_password, :role)
+	  end
+	end
+	
+And now make sure the routes of your application must be look like,
+
+	devise_for :users, controllers: { registrations: 'users/registrations' }
+	#any other routes...
+	
 If you have more than one Devise model in your application (such as User and Admin), you will notice that Devise uses the same views for all models. Fortunately, Devise offers an easy way to customize views. All you need to do is set config.scoped_views = true inside the config/initializers/devise.rb file.
 
 After doing so, you will be able to have views based on the role like users/sessions/new and admins/sessions/new. If no view is found within the scope, Devise will use the default view at devise/sessions/new. You can also use the generator to generate scoped views:
@@ -31,7 +56,7 @@ make sure the routes.rb file ..
 	  root to: "books#index" #associating controller action
 	end
 
-And also put these lines in custom controller, after the before action line..
+And also put these lines in application controller..
 
 	 def after_sign_in_path_for(resource)
 	    books_path # Redirect to the dashboard after sign-in
